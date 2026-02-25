@@ -21,7 +21,10 @@ export default function DailyRoundModal({ bed, onClose, onUpdate }) {
 
     const activeQueue = bed.activeQueue || {};
     const patientName = activeQueue.patient_name || 'Unknown Patient';
-    const bedId = bed.bed_id || bed.id;
+    // For ICU, daily_rounds.icu_bed_id should reference icu_beds.id (UUID),
+    // while for general beds daily_rounds.bed_id references beds.bed_id.
+    const isICU = !!bed.is_icu;
+    const bedId = isICU ? bed.id : (bed.bed_id || bed.id);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -44,7 +47,6 @@ export default function DailyRoundModal({ bed, onClose, onUpdate }) {
             }
 
             // Detect if this is an ICU patient
-            const isICU = !!bed.is_icu;
             const queueIdField = isICU ? 'icu_queue_id' : 'bed_queue_id';
             const bedIdField = isICU ? 'icu_bed_id' : 'bed_id';
 

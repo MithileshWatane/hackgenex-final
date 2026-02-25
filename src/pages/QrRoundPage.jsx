@@ -60,8 +60,11 @@ export default function QrRoundPage() {
 
           setBed({
             ...icuBed,
+            // For ICU we treat icu_beds.id as the primary UUID,
+            // and icu_beds.bed_id as the human-readable label.
             is_icu: true,
-            bed_number: icuBed.bed_id,
+            bed_id: icuBed.id,      // UUID for daily_rounds.icu_bed_id
+            bed_number: icuBed.bed_id, // label shown in UI
             activeQueue: activeQ,
           });
           setShowRoundModal(true);
