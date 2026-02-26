@@ -1,6 +1,7 @@
 const retailAiService = require('../services/retailAi');
 const voiceCallService = require('../services/database');
 const calcomService = require('../services/calcom');
+const { supabase } = require('../config/supabase');
 
 const callController = {
     async createCall(req, res) {
@@ -83,8 +84,33 @@ const callController = {
     },
 
     async handleWebhook(req, res) {
-        const { call_id, transcript, intent, booking_date, booking_id } = req.body;
-        console.log(`Webhook received for call ${call_id}:`, { intent, booking_date, booking_id });
+        const {
+            call_id,
+            transcript,
+            intent,
+            booking_date,
+            booking_id,
+            patient_name,
+            age,
+            disease,
+            phone,
+            email,
+            doctor_id,
+            notes,
+            is_emergency,
+        } = req.body;
+        console.log(`Webhook received for call ${call_id}:`, {
+            intent,
+            booking_date,
+            booking_id,
+            patient_name,
+            age,
+            disease,
+            phone,
+            email,
+            doctor_id,
+            is_emergency,
+        });
 
         try {
             let resultBookingId = booking_id;
@@ -104,6 +130,36 @@ const callController = {
                 booking_id: resultBookingId,
                 appointment_date: booking_date
             });
+
+            // Also create an appointment record in Supabase using details collected by the voice agent
+            if (supabase && intent === 'book' && patient_name && phone) {
+                try {
+                    const { data, error } = await supabase
+                        .from('appointments')
+                        .insert([{
+                            patient_name,
+                            age: age ? parseInt(age, 10) : null,
+                            disease: disease || null,
+                            phone,
+                            email: email || null,
+                            appointment_date: new Date().toISOString(),
+                            doctor_id: doctor_id || null,
+                            notes: notes || null,
+                            status: 'scheduled',
+                            is_emergency: !!is_emergency,
+                        }])
+                        .select()
+                        .single();
+
+                    if (error) {
+                        console.error('Supabase appointments insert error from webhook:', error.message);
+                    } else {
+                        console.log('Appointment created from voice webhook:', data.id);
+                    }
+                } catch (dbErr) {
+                    console.error('Unexpected error inserting appointment from webhook:', dbErr);
+                }
+            }
 
             if (res.status) res.status(200).send('Webhook processed');
         } catch (error) {
